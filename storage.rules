@@ -1,0 +1,44 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+      function userIsSignedIn() {
+        return request.auth != null;
+      }
+
+      function isValidImage(data) {
+        return data.contentType in ['image/jpg','image/jpeg','image/png']
+      }
+
+      function isValidFile(data) {
+        return data.contentType in [
+          'application/pdf',
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'application/vnd.ms-excel',
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        ]
+      }
+
+      function isValidFileSize(data) {
+        return data.size < 5 * 1024 * 1024
+      }
+
+    match /project/{projectId} {
+      match /task/{taskId}/images/{allPaths=**}{
+            allow read: if userIsSignedIn();
+            allow write: if userIsSignedIn()
+              && isValidImage(request.resource)
+              && isValidFileSize(request.resource);
+            allow delete: if userIsSignedIn()
+      }
+      match /task/{taskId}/files/{allPaths=**}{
+            allow read: if userIsSignedIn();
+            allow write: if userIsSignedIn()
+              && isValidFile(request.resource)
+              && isValidFileSize(request.resource);
+            allow delete: if userIsSignedIn()
+      }
+    }
+  }
+}
